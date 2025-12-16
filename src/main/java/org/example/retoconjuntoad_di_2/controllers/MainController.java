@@ -191,10 +191,22 @@ public class MainController implements Initializable {
             return;
         }
 
-        // Borra la copia seleccionada del repositorio.
-        copiaRepository.delete(seleccionada);
-        cargarCopiasUsuario(simpleSessionService.getActive());
+        // Diálogo de confirmación antes de borrar
+        Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmacion.setTitle("Confirmar borrado");
+        confirmacion.setHeaderText("¿Seguro que quieres borrar esta copia?");
+        confirmacion.setContentText("Esta acción no se puede deshacer.");
+
+        // Mostrar y esperar respuesta del usuario
+        confirmacion.showAndWait()
+                .filter(boton -> boton == ButtonType.OK)
+                .ifPresent(botonOk -> {
+                    // Borra la copia seleccionada del repositorio solo si confirma
+                    copiaRepository.delete(seleccionada);
+                    cargarCopiasUsuario(simpleSessionService.getActive());
+                });
     }
+
 
     /**
      * Maneja el evento de añadir una nueva copia.
