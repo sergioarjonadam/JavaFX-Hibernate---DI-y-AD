@@ -13,6 +13,7 @@ import org.example.retoconjuntoad_di_2.utils.DataProvider;
 import org.example.retoconjuntoad_di_2.utils.JavaFXUtil;
 
 import java.net.URL;
+import java.time.Year;
 import java.util.ResourceBundle;
 
 /**
@@ -21,13 +22,14 @@ import java.util.ResourceBundle;
  */
 public class PeliculaDetailController implements Initializable {
 
-    @FXML private TextField txtTitulo; // Campo de texto para ingresar el título de la película.
-    @FXML private TextField txtGenero; // Campo de texto para ingresar el género de la película.
-    @FXML private TextField txtAnio; // Campo de texto para ingresar el año de la película.
-    @FXML private TextField txtDirector; // Campo de texto para ingresar el director de la película.
+    @FXML private TextField txtTitulo;     // Campo de texto para ingresar el título de la película.
+    @FXML private TextField txtGenero;     // Campo de texto para ingresar el género de la película.
+    @FXML private TextField txtAnio;       // Campo de texto para ingresar el año de la película.
+    @FXML private TextField txtDirector;   // Campo de texto para ingresar el director de la película.
     @FXML private TextArea txtDescripcion; // Área de texto para ingresar la descripción de la película.
 
     private PeliculaRepository peliculaRepository; // Repositorio para gestionar las películas.
+    private static final short MIN_ANIO = 1900;     // Año mínimo permitido.
 
     /**
      * Inicializa el controlador y configura el repositorio de películas.
@@ -38,6 +40,10 @@ public class PeliculaDetailController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         peliculaRepository = new PeliculaRepository(DataProvider.getSessionFactory());
+
+        int anioActual = Year.now().getValue();
+        // Establecer texto de ayuda con el rango permitido, por ejemplo "1900 - 2025".
+        txtAnio.setPromptText(MIN_ANIO + " - " + anioActual);
     }
 
     /**
@@ -56,10 +62,12 @@ public class PeliculaDetailController implements Initializable {
 
         // Validar que los campos obligatorios no estén vacíos.
         if (titulo.isBlank() || genero.isBlank() || anioStr.isBlank()) {
-            JavaFXUtil.showModal(Alert.AlertType.ERROR,
+            JavaFXUtil.showModal(
+                    Alert.AlertType.ERROR,
                     "Datos incompletos",
                     "Faltan campos obligatorios",
-                    "Título, género y año son obligatorios.");
+                    "Título, género y año son obligatorios."
+            );
             return;
         }
 
@@ -68,10 +76,25 @@ public class PeliculaDetailController implements Initializable {
             // Validar que el año sea un número válido.
             anio = Short.parseShort(anioStr);
         } catch (NumberFormatException e) {
-            JavaFXUtil.showModal(Alert.AlertType.ERROR,
+            JavaFXUtil.showModal(
+                    Alert.AlertType.ERROR,
                     "Año incorrecto",
                     "Formato inválido",
-                    "Introduce un número válido para el año.");
+                    "Introduce un número válido para el año."
+            );
+            return;
+        }
+
+        int anioActual = Year.now().getValue();
+
+        // Validar que el año esté dentro del rango permitido.
+        if (anio < MIN_ANIO || anio > anioActual) {
+            JavaFXUtil.showModal(
+                    Alert.AlertType.ERROR,
+                    "Año fuera de rango",
+                    "Valor no realista",
+                    "El año debe estar entre " + MIN_ANIO + " y " + anioActual + "."
+            );
             return;
         }
 
@@ -86,10 +109,12 @@ public class PeliculaDetailController implements Initializable {
         // Guardar la película en el repositorio.
         peliculaRepository.save(pelicula);
 
-        JavaFXUtil.showModal(Alert.AlertType.INFORMATION,
+        JavaFXUtil.showModal(
+                Alert.AlertType.INFORMATION,
                 "Película creada",
                 "Operación completada",
-                "La nueva película se ha registrado correctamente.");
+                "La nueva película se ha registrado correctamente."
+        );
 
         cerrarVentana();
     }
