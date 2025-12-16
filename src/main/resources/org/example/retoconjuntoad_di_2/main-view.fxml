@@ -9,7 +9,10 @@
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
 
+<?import javafx.scene.control.TextField?>
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="org.example.retoconjuntoad_di_2.controllers.MainController">
@@ -43,7 +46,12 @@
                     prefWidth="150"
                     style="-fx-background-color: #d9534f; -fx-text-fill: white;"/>
 
-
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                <Label text="Buscar:"/>
+                <TextField fx:id="txtBuscar"
+                           promptText="Buscar por título..."
+                           prefWidth="250.0"/>
+            </HBox>
             <!-- Tabla de copias -->
             <TableView fx:id="tabla" prefHeight="300.0" prefWidth="600.0">
                 <columns>

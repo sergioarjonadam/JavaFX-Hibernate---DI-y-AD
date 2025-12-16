@@ -1,6 +1,9 @@
 package org.example.retoconjuntoad_di_2.controllers;
 
 import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -21,10 +24,6 @@ import java.net.URL;
 import java.util.List;
 import java.util.ResourceBundle;
 
-/**
- * Controlador principal de la aplicación.
- * Gestiona la vista principal, incluyendo la tabla de copias y las acciones del usuario.
- */
 public class MainController implements Initializable {
 
     public Button btnAñadir;
@@ -32,57 +31,56 @@ public class MainController implements Initializable {
     public Button btnDetalle;
 
     @FXML
-    private Button btnLogout; // Botón para cerrar sesión.
+    private Button btnLogout;
 
     @FXML
-    private Label welcomeText; // Etiqueta para mostrar un mensaje de bienvenida.
+    private Label welcomeText;
 
     @FXML
-    private Label lblUsuario; // Etiqueta para mostrar el nombre del usuario logueado.
+    private Label lblUsuario;
 
     @FXML
-    private Label lblTotalCopias; // Etiqueta para mostrar el total de copias del usuario.
+    private Label lblTotalCopias;
 
     @FXML
-    private TableView<Copia> tabla; // Tabla para mostrar las copias.
+    private TableView<Copia> tabla;
 
     @FXML
-    private TableColumn<Copia, String> cId; // Columna para mostrar el ID de la copia.
+    private TableColumn<Copia, String> cId;
 
     @FXML
-    private TableColumn<Copia, String> cTitulo; // Columna para mostrar el título de la película.
+    private TableColumn<Copia, String> cTitulo;
 
     @FXML
-    private TableColumn<Copia, String> cGenero; // Columna para mostrar el género de la película.
+    private TableColumn<Copia, String> cGenero;
 
     @FXML
-    private TableColumn<Copia, String> cAnio; // Columna para mostrar el año de la película.
+    private TableColumn<Copia, String> cAnio;
 
     @FXML
-    private TableColumn<Copia, String> cEstado; // Columna para mostrar el estado de la copia.
+    private TableColumn<Copia, String> cEstado;
 
     @FXML
-    private TableColumn<Copia, String> cSoporte; // Columna para mostrar el soporte de la copia.
+    private TableColumn<Copia, String> cSoporte;
 
     @FXML
-    private Button btnAddPelicula; // Botón para añadir una nueva película.
+    private Button btnAddPelicula;
 
-    // Servicios
-    private SimpleSessionService simpleSessionService; // Servicio para gestionar la sesión del usuario.
-    private CopiaRepository copiaRepository; // Repositorio para gestionar las copias.
+    @FXML
+    private TextField txtBuscar; // Campo de búsqueda por título
 
-    /**
-     * Inicializa el controlador y configura la vista principal.
-     *
-     * @param url URL de inicialización.
-     * @param resourceBundle Recursos de inicialización.
-     */
+    private SimpleSessionService simpleSessionService;
+    private CopiaRepository copiaRepository;
+
+    // Lista completa y lista filtrada para la tabla
+    private final ObservableList<Copia> copiasUsuario = FXCollections.observableArrayList();
+    private FilteredList<Copia> copiasFiltradas;
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         simpleSessionService = new SimpleSessionService();
         copiaRepository = new CopiaRepository(DataProvider.getSessionFactory());
 
-        // Si no hay usuario logueado, redirige al login.
         if (!simpleSessionService.isLoggedIn()) {
             JavaFXUtil.showModal(
                     Alert.AlertType.WARNING,
@@ -99,16 +97,20 @@ public class MainController implements Initializable {
 
         if (!user.isEsAdmin()) {
             btnAddPelicula.setVisible(false);
-            btnAddPelicula.setManaged(false); // Oculta el botón si el usuario no es administrador.
+            btnAddPelicula.setManaged(false);
         }
 
         configurarTabla();
+
+        // Configurar lista filtrada y búsqueda
+        copiasFiltradas = new FilteredList<>(copiasUsuario, copia -> true);
+        tabla.setItems(copiasFiltradas);
+
+        configurarBusqueda();
+
         cargarCopiasUsuario(user);
     }
 
-    /**
-     * Configura las columnas de la tabla para mostrar los datos de las copias.
-     */
     private void configurarTabla() {
         cId.setCellValueFactory(cellData ->
                 new SimpleStringProperty(
@@ -161,23 +163,45 @@ public class MainController implements Initializable {
     }
 
     /**
-     * Carga las copias asociadas al usuario logueado en la tabla.
-     *
-     * @param user Usuario logueado.
+     * Configura el filtro de búsqueda en tiempo real por título de película.
      */
-    private void cargarCopiasUsuario(User user) {
-        tabla.getItems().clear();
-        List<Copia> copias = copiaRepository.findByUser(user);
-        tabla.getItems().addAll(copias);
-        lblTotalCopias.setText("Total de copias: " + copias.size());
+    private void configurarBusqueda() {
+        if (txtBuscar == null) {
+            return; // por si el FXML aún no tiene el campo
+        }
+
+        txtBuscar.textProperty().addListener((obs, oldValue, newValue) -> {
+            String filtro = newValue != null ? newValue.trim().toLowerCase() : "";
+
+            copiasFiltradas.setPredicate(copia -> {
+                if (filtro.isEmpty()) {
+                    return true;
+                }
+                if (copia.getPelicula() == null || copia.getPelicula().getTitulo() == null) {
+                    return false;
+                }
+                String titulo = copia.getPelicula().getTitulo().toLowerCase();
+                // Empieza por el texto escrito, p.ej. "el pa"
+                return titulo.startsWith(filtro);
+            });
+
+            // Actualizar contador con las filas visibles
+            lblTotalCopias.setText("Total de copias: " + copiasFiltradas.size());
+        });
     }
-    // ====== Botones ======
 
     /**
-     * Maneja el evento de borrar una copia seleccionada.
-     *
-     * @param actionEvent Evento de acción generado al presionar el botón de borrar.
+     * Carga las copias del usuario en la lista base y actualiza el total.
      */
+    private void cargarCopiasUsuario(User user) {
+        copiasUsuario.clear();
+        List<Copia> copias = copiaRepository.findByUser(user);
+        copiasUsuario.addAll(copias);
+
+        // Al recargar, se aplica el filtro actual automáticamente
+        lblTotalCopias.setText("Total de copias: " + copiasFiltradas.size());
+    }
+
     @FXML
     public void borrar(ActionEvent actionEvent) {
         Copia seleccionada = tabla.getSelectionModel().getSelectedItem();
@@ -191,28 +215,19 @@ public class MainController implements Initializable {
             return;
         }
 
-        // Diálogo de confirmación antes de borrar
         Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
         confirmacion.setTitle("Confirmar borrado");
         confirmacion.setHeaderText("¿Seguro que quieres borrar esta copia?");
         confirmacion.setContentText("Esta acción no se puede deshacer.");
 
-        // Mostrar y esperar respuesta del usuario
         confirmacion.showAndWait()
                 .filter(boton -> boton == ButtonType.OK)
                 .ifPresent(botonOk -> {
-                    // Borra la copia seleccionada del repositorio solo si confirma
                     copiaRepository.delete(seleccionada);
                     cargarCopiasUsuario(simpleSessionService.getActive());
                 });
     }
 
-
-    /**
-     * Maneja el evento de añadir una nueva copia.
-     *
-     * @param actionEvent Evento de acción generado al presionar el botón de añadir.
-     */
     @FXML
     public void añadir(ActionEvent actionEvent) {
         var user = simpleSessionService.getActive();
@@ -259,11 +274,6 @@ public class MainController implements Initializable {
         }
     }
 
-    /**
-     * Maneja el evento de ver el detalle de una copia seleccionada.
-     *
-     * @param actionEvent Evento de acción generado al presionar el botón de ver detalle.
-     */
     @FXML
     public void verDetalle(ActionEvent actionEvent) {
         Copia seleccionada = tabla.getSelectionModel().getSelectedItem();
@@ -306,11 +316,6 @@ public class MainController implements Initializable {
         }
     }
 
-    /**
-     * Maneja el evento de añadir una nueva película.
-     *
-     * @param actionEvent Evento de acción generado al presionar el botón de añadir película.
-     */
     @FXML
     public void añadirPelicula(ActionEvent actionEvent) {
         try {
@@ -337,11 +342,6 @@ public class MainController implements Initializable {
         }
     }
 
-    /**
-     * Maneja el evento de cerrar sesión.
-     *
-     * @param event Evento de acción generado al presionar el botón de logout.
-     */
     @FXML
     public void logout(ActionEvent event) {
         JavaFXUtil.showModal(
