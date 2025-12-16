@@ -24,6 +24,7 @@ public class CopyDetailController implements Initializable {
     public Button btnGuardar;
     public Button btnEliminar;
     public Button btnCancelar;
+
     @FXML
     private Label lblId; // Etiqueta para mostrar el ID de la copia.
 
@@ -31,13 +32,13 @@ public class CopyDetailController implements Initializable {
     private ComboBox<Pelicula> comboPelicula; // ComboBox para seleccionar una película.
 
     @FXML
-    private TextField txtTitulo; // Campo de texto para mostrar el título de la película.
+    private Label lblTitulo; // Etiqueta para mostrar el título de la película.
 
     @FXML
-    private TextField txtGenero; // Campo de texto para mostrar el género de la película.
+    private Label lblGenero; // Etiqueta para mostrar el género de la película.
 
     @FXML
-    private TextField txtAnio; // Campo de texto para mostrar el año de la película.
+    private Label lblAnio; // Etiqueta para mostrar el año de la película.
 
     @FXML
     private ComboBox<String> comboEstado; // ComboBox para seleccionar el estado de la copia.
@@ -87,7 +88,9 @@ public class CopyDetailController implements Initializable {
      * Rellena los campos de la interfaz con los datos de la copia.
      */
     private void rellenarCampos() {
-        if (copia == null) return;
+        if (copia == null) {
+            return;
+        }
 
         // Mostrar el ID de la copia.
         if (copia.getId() != null) {
@@ -100,9 +103,12 @@ public class CopyDetailController implements Initializable {
         if (copia.getPelicula() != null) {
             comboPelicula.getSelectionModel().select(copia.getPelicula());
             if (copia.getId() != null) {
-                comboPelicula.setDisable(true); // Deshabilitar cambios si la copia ya existe.
+                // Si la copia ya existe, no se permite cambiar de película.
+                comboPelicula.setDisable(true);
             }
             actualizarDatosPelicula(copia.getPelicula());
+        } else {
+            actualizarDatosPelicula(null);
         }
 
         // Configurar estado y soporte.
@@ -121,15 +127,15 @@ public class CopyDetailController implements Initializable {
      */
     private void actualizarDatosPelicula(Pelicula pelicula) {
         if (pelicula == null) {
-            txtTitulo.setText("");
-            txtGenero.setText("");
-            txtAnio.setText("");
+            lblTitulo.setText("-");
+            lblGenero.setText("-");
+            lblAnio.setText("-");
             return;
         }
 
-        txtTitulo.setText(pelicula.getTitulo());
-        txtGenero.setText(pelicula.getGenero());
-        txtAnio.setText(pelicula.getAnio() != null ? pelicula.getAnio().toString() : "");
+        lblTitulo.setText(pelicula.getTitulo() != null ? pelicula.getTitulo() : "-");
+        lblGenero.setText(pelicula.getGenero() != null ? pelicula.getGenero() : "-");
+        lblAnio.setText(pelicula.getAnio() != null ? pelicula.getAnio().toString() : "-");
     }
 
     /**
@@ -139,7 +145,9 @@ public class CopyDetailController implements Initializable {
      */
     @FXML
     public void guardar(ActionEvent actionEvent) {
-        if (copia == null) return;
+        if (copia == null) {
+            return;
+        }
 
         Pelicula peliculaSeleccionada = comboPelicula.getSelectionModel().getSelectedItem();
         String estado = comboEstado.getSelectionModel().getSelectedItem();
